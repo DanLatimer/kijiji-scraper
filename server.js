@@ -118,7 +118,7 @@ function formatAds(ads) {
     <table>${adsTableRows}</table>`;
 }
 
-const cronRule = `* */${config.minutesBetweenCheck} * * * *`;
+const cronRule = `*/${config.minutesBetweenCheck} * * * *`;
 schedule.scheduleJob(cronRule, () => {
     updateItems().then(() => {
         console.log(`Ads updated, number of ads: ${processedAds.length}`);
