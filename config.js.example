@@ -1,0 +1,19 @@
+var config = {
+
+    // Url of the kijiji search page you want to scrape
+    // hint - use the filters as much as you want then copy the resulting url
+    url: '',
+
+    email: {
+        // Just the username of the gmail address Eg. `myAccount` from `myAccount@gmail.com`
+        gmailUser: '',
+
+        // The password of the gmail address
+        gmailPassword: ''
+    },
+
+    // Check evert X minutes
+    minutesBetweenCheck: 10
+};
+
+module.exports = config;
