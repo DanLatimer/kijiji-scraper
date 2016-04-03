@@ -37,6 +37,14 @@ class Ad {
     isInList(ads) {
         return ads.filter(ad => this.isEqual(ad)).length > 0;
     }
+
+    toHtml() {
+        return `<tr><td><a href="${this.url}">${this.title}</a></td></tr>
+        <tr><td>${this.location}</td></tr>
+        <tr><td>${this.description}</td></tr>
+        <tr><td><img src="${this.image}"/></td></tr>
+        <tr><td>&nbsp;</td></tr>`;
+    }
 }
 
 function updateItems() {
@@ -50,9 +58,7 @@ function updateItems() {
 
             const $ = cheerio.load(html);
             const $items = $('div.search-item');
-            const parsedAds = $items.map(function (index, $item) {
-                return Ad.buildAd($(this));
-            }).get();
+            const parsedAds = $items.map(function() { return Ad.buildAd($(this)); }).get();
 
             const newAds = parsedAds.filter(ad => !ad.isInList(processedAds));
 
@@ -83,7 +89,7 @@ function emailAds(ads) {
     };
 
     // send mail with defined transport object
-    transporter.sendMail(mailOptions, function(error){
+    transporter.sendMail(mailOptions, error => {
         if (error) {
             return console.log(`Email failed: ${error}`);
         }
@@ -105,14 +111,8 @@ function createAdsFoundMessage(ads) {
 }
 
 function formatAds(ads) {
-    const adsTableRows = ads.map(ad =>
-        `<tr><td><a href="${ad.url}">${ad.title}</a></td></tr>
-        <tr><td>${ad.location}</td></tr>
-        <tr><td>${ad.description}</td></tr>
-        <tr><td><img src="${ad.image}"/></td></tr>
-        <tr><td>&nbsp;</td></tr>`);
-
     const adsFoundMessage = createAdsFoundMessage(ads);
+    const adsTableRows = ads.map(ad => ad.toHtml());
 
     return `<h1>${adsFoundMessage}</h1>
     <table>${adsTableRows}</table>`;
