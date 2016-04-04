@@ -10,12 +10,13 @@ var config = require('./config');
 let processedAds = [];
 
 class Ad {
-    constructor(url, image, title, description, location) {
+    constructor(url, image, title, description, location, price) {
         this.url = url;
         this.image = image;
         this.title = title;
         this.description = description;
         this.location = location;
+        this.price = price;
     }
 
     static buildAd($jquerySelector) {
@@ -26,6 +27,7 @@ class Ad {
         ad.title = $jquerySelector.find('a.title').text().trim();
         ad.description = $jquerySelector.find('.description').text().trim();
         ad.location = $jquerySelector.find('.location').text().trim();
+        ad.price = $jquerySelector.find('.price').text().trim();
 
         return ad;
     }
@@ -39,37 +41,51 @@ class Ad {
     }
 
     toHtml() {
-        return `<tr><td><a href="${this.url}">${this.title}</a></td></tr>
-        <tr><td>${this.location}</td></tr>
-        <tr><td>${this.description}</td></tr>
-        <tr><td><img src="${this.image}"/></td></tr>
-        <tr><td>&nbsp;</td></tr>`;
+        return `<tr><td><a href="${this.url}">${this.title}</a> Price: ${this.price}</td></tr>` +
+        `<tr><td>${this.location}</td></tr>` +
+        `<tr><td>${this.description}</td></tr>` +
+        `<tr><td><a href="${this.url}"><img src="${this.image}"/></a></td></tr>` +
+        `<tr><td>&nbsp;</td></tr>`;
     }
 }
 
 function updateItems() {
-    return new RSVP.Promise((resolve, reject) => {
+    const promises = config.urls.map(url => createAdFetchPromise(url));
 
-        request(config.url, (error, response, html) => {
-            if(error) {
+    return RSVP.Promise.all(promises).then(parsedAdsList => {
+        const fetchedAds = parsedAdsList.reduce((adList1, adList2) => adList1.concat(adList2));
+        processNewAds(fetchedAds);
+    });
+}
+
+function createAdFetchPromise(url) {
+    return new RSVP.Promise((resolve, reject) => {
+        request(url, (error, response, html) => {
+            if (error) {
                 reject();
                 return;
             }
 
             const $ = cheerio.load(html);
             const $items = $('div.search-item');
-            const parsedAds = $items.map(function() { return Ad.buildAd($(this)); }).get();
+            const parsedAds = $items.map(function () {
+                return Ad.buildAd($(this));
+            }).get();
 
-            const newAds = parsedAds.filter(ad => !ad.isInList(processedAds));
-
-            if (newAds.length) {
-                emailAds(newAds);
-                processedAds = processedAds.concat(newAds);
-            }
-
-            resolve();
+            resolve(parsedAds);
         });
     });
+}
+
+function processNewAds(fetchedAds) {
+    const newAds = fetchedAds.filter(ad => !ad.isInList(processedAds));
+
+    if (!newAds.length) {
+        return;
+    }
+
+    emailAds(newAds);
+    processedAds = processedAds.concat(newAds);
 }
 
 function emailAds(ads) {
@@ -114,8 +130,8 @@ function formatAds(ads) {
     const adsFoundMessage = createAdsFoundMessage(ads);
     const adsTableRows = ads.map(ad => ad.toHtml());
 
-    return `<h1>${adsFoundMessage}</h1>
-    <table>${adsTableRows}</table>`;
+    return `<h1>${adsFoundMessage}</h1>` +
+    `<table>${adsTableRows}</table>`;
 }
 
 const cronRule = `*/${config.minutesBetweenCheck} * * * *`;

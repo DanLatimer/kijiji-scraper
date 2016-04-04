@@ -1,8 +1,10 @@
 var config = {
 
-    // Url of the kijiji search page you want to scrape
+    // Urls of the kijiji search pages you want to scrape
     // hint - use the filters as much as you want then copy the resulting url
-    url: '',
+    urls: [
+        ''
+    ],
 
     email: {
         // Just the username of the gmail address Eg. `myAccount` from `myAccount@gmail.com`
