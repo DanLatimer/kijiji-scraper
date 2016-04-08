@@ -7,6 +7,6 @@ Configuration:
    - https://support.google.com/accounts/answer/6010255?hl=en
 
 Running the App:
-1. Install node
+1. Install node 5.x
 2. Install this app's dependencies: `npm install` from the root directory of the project
 3. Run the app as a server: `node server` from the root directory of the project
