@@ -17,6 +17,7 @@ class Ad {
         this.description = description;
         this.location = location;
         this.price = price;
+        this.isBusiness = null;
     }
 
     static buildAd($jquerySelector) {
@@ -30,6 +31,23 @@ class Ad {
         ad.price = $jquerySelector.find('.price').text().trim();
 
         return ad;
+    }
+
+    queryIsBusinessAd() {
+	    return new RSVP.Promise((resolve, reject) => {
+            request(this.url, (error, response, html) => {
+                if (error) {
+                    reject();
+                    return;
+                }
+
+                const $ = cheerio.load(html);
+                this.isBusiness = $('.ad-attributes tr').get()
+                    .filter(item => $(item).find('th').text().includes('For Sale By'))
+                    .every(item => $(item).find('td').text().includes('Business'))
+                resolve(this);
+            });
+	    });
     }
 
     isEqual(ad) {
@@ -54,6 +72,16 @@ function updateItems() {
 
     return RSVP.Promise.all(promises).then(parsedAdsList => {
         const fetchedAds = parsedAdsList.reduce((adList1, adList2) => adList1.concat(adList2));
+
+        if (config.noBusinessAds) {
+            const promises = fetchedAds.map(ad => ad.queryIsBusinessAd())
+            RSVP.Promise.all(promises).then(adList => {
+                adList = adList.filter(adItem => !adItem.isBusiness);
+                processNewAds(adList);
+            });
+            return;
+        }
+
         processNewAds(fetchedAds);
     }).then(() => {
         console.log(`Ads updated, number of ads: ${processedAds.length}`);
@@ -69,11 +97,9 @@ function createAdFetchPromise(url) {
             }
 
             const $ = cheerio.load(html);
-            const $items = $('div.search-item');
-            const parsedAds = $items.map(function () {
-                return Ad.buildAd($(this));
-            }).get();
-
+            const parsedAds = $('div.search-item').get()
+                .map(item => Ad.buildAd($(item)));
+            
             resolve(parsedAds);
         });
     });

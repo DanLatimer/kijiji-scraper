@@ -15,7 +15,10 @@ var config = {
     },
 
     // Check evert X minutes
-    minutesBetweenCheck: 10
+    minutesBetweenCheck: 10,
+
+    // Requires a server call per ad, enable at own risk
+    noBusinessAds: false
 };
 
 module.exports = config;
