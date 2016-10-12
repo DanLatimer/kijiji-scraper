@@ -55,6 +55,8 @@ function updateItems() {
     return RSVP.Promise.all(promises).then(parsedAdsList => {
         const fetchedAds = parsedAdsList.reduce((adList1, adList2) => adList1.concat(adList2));
         processNewAds(fetchedAds);
+    }).then(() => {
+        console.log(`Ads updated, number of ads: ${processedAds.length}`);
     });
 }
 
@@ -135,13 +137,11 @@ function formatAds(ads) {
 }
 
 const cronRule = `*/${config.minutesBetweenCheck} * * * *`;
-schedule.scheduleJob(cronRule, () => {
-    updateItems().then(() => {
-        console.log(`Ads updated, number of ads: ${processedAds.length}`);
-    });
-});
+schedule.scheduleJob(cronRule, updateItems);
 
 console.log('Kijiji Scrapper started.');
-console.log(`Watching the following page for new ads: ${config.url}`);
-console.log(`Polling for new ads every ${config.minutesBetweenCheck} minutes.`);
+console.log(`Watching the following page for new ads: \n${config.urls.join('\n')}`);
+
 console.log();
+
+updateItems();
