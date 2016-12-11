@@ -1,0 +1,6 @@
+{
+  "name": "Kijiji-scraper",
+  "tagline": "A tool to get emailed when new ads are posted under a specific search",
+  "body": "# Kijiji Scraper\r\n\r\n## Configuration\r\n1. Create a config.js file based off the config.js.example file included.\r\n2. Fill in the config values\r\n3. Log into your gmail account and allow insecure api apps (or update this app to use Oath2, it's on the todo list)\r\n   - https://support.google.com/accounts/answer/6010255?hl=en\r\n\r\n## Running the App\r\n1. Install node 5.x\r\n2. Install this app's dependencies: `npm install` from the root directory of the project\r\n3. Run the app as a server: `node server` from the root directory of the project\r\n4. ...\r\n5. Profit!",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
