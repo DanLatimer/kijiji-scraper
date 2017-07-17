@@ -10,8 +10,19 @@ var config = {
         // Just the username of the gmail address Eg. `myAccount` from `myAccount@gmail.com`
         gmailUser: '',
 
-        // The password of the gmail address
-        gmailPassword: ''
+        // The password of the gmail address (or empty if oauth is used)
+        gmailPassword: '',
+
+        // see here to get setup for oauth: https://medium.com/@pandeysoni/nodemailer-service-in-node-js-using-smtp-and-xoauth2-7c638a39a37e
+        // notes:
+        //   - the scope required for sending emails is: https://mail.google.com/
+        //   - you will need to join the "Risky Access Permissions By Unreviewed Apps" for this to work:
+        //     https://groups.google.com/forum/#!forum/risky-access-by-unreviewed-apps
+        oauth: {
+            clientId: "",
+            clientSecret: "",
+            refreshToken: ""
+        }
     },
 
     // Check evert X minutes
