@@ -1,15 +1,16 @@
 {
-  "name"         : "kijiji-scraper",
-  "version"      : "0.0.1",
-  "description"  : "Use to find out about the ads you care about as soon as they come out as possible.",
-  "main"         : "server.js",
-  "author"       : "DanLatimer",
-  "dependencies" : {
-    "express"    : "latest",
-    "request"    : "latest",
-    "cheerio"    : "latest",
-    "node-schedule" : "latest",
-    "rsvp"       : "latest",
-    "nodemailer" : "latest"
+  "name": "kijiji-scraper",
+  "version": "0.0.1",
+  "description": "Use to find out about the ads you care about as soon as they come out as possible.",
+  "main": "server.js",
+  "author": "DanLatimer",
+  "dependencies": {
+    "cheerio": "latest",
+    "express": "latest",
+    "node-schedule": "latest",
+    "nodemailer": "latest",
+    "request": "latest",
+    "rsvp": "latest",
+    "xoauth2": "^1.2.0"
   }
 }

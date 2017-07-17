@@ -34,7 +34,7 @@ class Ad {
     }
 
     queryIsBusinessAd() {
-	    return new RSVP.Promise((resolve, reject) => {
+        return new RSVP.Promise((resolve, reject) => {
             request(this.url, (error, response, html) => {
                 if (error) {
                     reject();
@@ -47,7 +47,7 @@ class Ad {
                     .every(item => $(item).find('td').text().includes('Business'))
                 resolve(this);
             });
-	    });
+        });
     }
 
     isEqual(ad) {
@@ -77,14 +77,26 @@ function updateItems() {
             const promises = fetchedAds.map(ad => ad.queryIsBusinessAd())
             RSVP.Promise.all(promises).then(adList => {
                 adList = adList.filter(adItem => !adItem.isBusiness);
-                processNewAds(adList);
+
+	        processNewAds(adList);
+            })
+            .catch(e => {
+                console.log(e);
             });
             return;
         }
 
-        processNewAds(fetchedAds);
+        //processNewAds(fetchedAds);
+        try {
+            processNewAds(fetchedAds);
+        } catch (e) {
+            console.log(e);
+        }
     }).then(() => {
         console.log(`Ads updated, number of ads: ${processedAds.length}`);
+    })
+    .catch(e => {
+        console.log(e);
     });
 }
 
@@ -119,9 +131,10 @@ function processNewAds(fetchedAds) {
 function emailAds(ads) {
     logAdsBeingEmailed(ads);
 
-    // create reusable transporter object using the default SMTP transport
-    let transporter = nodemailer.createTransport(
-        `smtps://${config.email.gmailUser}%40gmail.com:${config.email.gmailPassword}@smtp.gmail.com`);
+    let transporter = getMailerTransport();
+    if (!transporter) {
+        return;
+    }
 
     // setup e-mail data with unicode symbols
     let mailOptions = {
@@ -132,6 +145,7 @@ function emailAds(ads) {
         html: formatAds(ads) // html body
     };
 
+
     // send mail with defined transport object
     transporter.sendMail(mailOptions, error => {
         if (error) {
@@ -139,6 +153,31 @@ function emailAds(ads) {
         }
 
         console.log(`Email sent successfully`);
+    });
+}
+
+function getMailerTransport() {
+    if (config.email.gmailPassword) {
+        return nodemailer.createTransport(
+            `smtps://${config.email.gmailUser}%40gmail.com:${config.email.gmailPassword}@smtp.gmail.com`);
+    }
+
+    if (!config.email.oauth.clientId || !config.email.oauth.clientSecret || !config.email.oauth.refreshToken) {
+        console.log('Could not initialize mailer as password was empty and no oauth credentials were provided') 
+        return null;
+    } 
+
+    return nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        auth: {
+            type: "OAuth2",
+            user: config.email.gmailUser,
+            clientId: config.email.oauth.clientId,
+            clientSecret: config.email.oauth.clientSecret,
+            refreshToken: config.email.oauth.refreshToken
+        }
     });
 }
 
