@@ -12,7 +12,7 @@ var config = require('./config');
 let processedAds = [];
 
 class Ad {
-    constructor(url, image, title, description, location, price, datePostedText) {
+    constructor(url, image, title, description, location, price, datePosted) {
         this.url = url;
         this.image = image;
         this.title = title;
@@ -20,7 +20,7 @@ class Ad {
         this.location = location;
         this.price = price;
         this.isBusiness = null;
-        this.datePosted = Ad.determineDatePosted(datePostedText);
+        this.datePosted = datePosted;
     }
 
     static buildAd($jquerySelector) {
@@ -57,7 +57,7 @@ class Ad {
             return parsedDateString;
         }
 
-        console.log("Unexpected date posted text:" + datePostedText);
+        console.error("Unexpected date posted text:" + datePostedText);
         return moment();
     }
 
@@ -116,7 +116,6 @@ function createAdFetchPromise(url) {
 
             const parsedAds = $('div.search-item').get()
                 .map(item => Ad.buildAd($(item)))
-                .filter(ad => ad.datePosted != null); // removes sponsored ads
             
             resolve(parsedAds);
         });
