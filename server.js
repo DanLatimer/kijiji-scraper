@@ -36,15 +36,9 @@ class Ad {
     queryIsBusinessAd() {
         return new RSVP.Promise((resolve, reject) => {
             request(this.url, (error, response, html) => {
-                if (error) {
-                    reject();
-                    return;
-                }
-
                 const $ = cheerio.load(html);
-                this.isBusiness = $('.ad-attributes tr').get()
-                    .filter(item => $(item).find('th').text().includes('For Sale By'))
-                    .every(item => $(item).find('td').text().includes('Business'))
+                const adProfile = $('#R2SProfile').text();
+                this.isBusiness = adProfile.includes('Business') || adProfile.includes('Retail');
                 resolve(this);
             });
         });
@@ -70,44 +64,26 @@ class Ad {
 function updateItems() {
     const promises = config.urls.map(url => createAdFetchPromise(url));
 
-    return RSVP.Promise.all(promises).then(parsedAdsList => {
-        const fetchedAds = parsedAdsList.reduce((adList1, adList2) => adList1.concat(adList2));
+    return RSVP.Promise.all(promises)
+        .then(parsedAdsList => {
+            const fetchedAds = parsedAdsList.reduce((adList1, adList2) => adList1.concat(adList2));
 
-        if (config.noBusinessAds) {
+            if (!config.noBusinessAds) {
+                processNewAds(fetchedAds);
+            }
+
             const promises = fetchedAds.map(ad => ad.queryIsBusinessAd())
-            RSVP.Promise.all(promises).then(adList => {
-                adList = adList.filter(adItem => !adItem.isBusiness);
-
-	        processNewAds(adList);
-            })
-            .catch(e => {
-                console.log(e);
-            });
-            return;
-        }
-
-        //processNewAds(fetchedAds);
-        try {
-            processNewAds(fetchedAds);
-        } catch (e) {
-            console.log(e);
-        }
-    }).then(() => {
-        console.log(`Ads updated, number of ads: ${processedAds.length}`);
-    })
-    .catch(e => {
-        console.log(e);
-    });
+            return RSVP.Promise.all(promises)
+                .then(adList => adList.filter(adItem => !adItem.isBusiness))
+                .then(adList => processNewAds(adList))
+        }).then(() => {
+            console.log(`Ads updated, number of ads: ${processedAds.length}`);
+        })
 }
 
 function createAdFetchPromise(url) {
     return new RSVP.Promise((resolve, reject) => {
         request(url, (error, response, html) => {
-            if (error) {
-                reject();
-                return;
-            }
-
             const $ = cheerio.load(html);
             const parsedAds = $('div.search-item').get()
                 .map(item => Ad.buildAd($(item)));
