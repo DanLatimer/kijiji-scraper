@@ -1,7 +1,9 @@
 "use strict";
+var _ = require('lodash');
 var request = require('request');
 var cheerio = require('cheerio');
 var schedule = require('node-schedule');
+var moment = require('moment');
 var RSVP = require('rsvp');
 var nodemailer = require('nodemailer');
 
@@ -10,7 +12,7 @@ var config = require('./config');
 let processedAds = [];
 
 class Ad {
-    constructor(url, image, title, description, location, price) {
+    constructor(url, image, title, description, location, price, datePosted) {
         this.url = url;
         this.image = image;
         this.title = title;
@@ -18,6 +20,7 @@ class Ad {
         this.location = location;
         this.price = price;
         this.isBusiness = null;
+        this.datePosted = datePosted;
     }
 
     static buildAd($jquerySelector) {
@@ -29,8 +32,33 @@ class Ad {
         ad.description = $jquerySelector.find('.description').text().trim();
         ad.location = $jquerySelector.find('.location').text().trim();
         ad.price = $jquerySelector.find('.price').text().trim();
+        ad.datePosted = Ad.determineDatePosted($jquerySelector.find('.date-posted').text().trim());
 
         return ad;
+    }
+
+    static determineDatePosted(datePostedText) {
+        if (!datePostedText) {
+            return null;
+        }
+
+        var relativeTimeRegex = /(\d+) (hour|minute|second)s? ago/;
+        var match = relativeTimeRegex.exec(datePostedText);
+        if (match != null) {
+            return moment().subtract(match[1], match[2]);
+        }
+
+        if (datePostedText === 'Yesterday') {
+            return moment().subtract(1, 'day');
+        }
+
+        var parsedDateString = moment(datePostedText, 'DD-MM-YYYY');
+        if (parsedDateString.isValid()) {
+            return parsedDateString;
+        }
+
+        console.error("Unexpected date posted text:" + datePostedText);
+        return moment();
     }
 
     queryIsBusinessAd() {
@@ -49,7 +77,7 @@ class Ad {
     }
 
     isInList(ads) {
-        return ads.filter(ad => this.isEqual(ad)).length > 0;
+        return _.some(ads, ad => this.isEqual(ad));
     }
 
     toHtml() {
@@ -85,8 +113,9 @@ function createAdFetchPromise(url) {
     return new RSVP.Promise((resolve, reject) => {
         request(url, (error, response, html) => {
             const $ = cheerio.load(html);
+
             const parsedAds = $('div.search-item').get()
-                .map(item => Ad.buildAd($(item)));
+                .map(item => Ad.buildAd($(item)))
             
             resolve(parsedAds);
         });
@@ -94,7 +123,9 @@ function createAdFetchPromise(url) {
 }
 
 function processNewAds(fetchedAds) {
-    const newAds = fetchedAds.filter(ad => !ad.isInList(processedAds));
+    let newAds = fetchedAds.filter(ad => !ad.isInList(processedAds));
+    newAds = _.uniqBy(newAds, 'url');
+    newAds = _.orderBy(newAds, ['datePosted'], ['desc']);
 
     if (!newAds.length) {
         return;
