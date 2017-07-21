@@ -1,5 +1,7 @@
 Kijiji Scraper
 
+Kijiji Scraper is a kijiji-bot to periodically perform the searches you tell it you're interested in. It will then email you with any new ads listed under those searches.
+
 Configuration:
 1. Create a config.js file based off the config.js.example file included.
 2. Fill in the config values
