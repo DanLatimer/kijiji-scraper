@@ -6,10 +6,11 @@ var schedule = require('node-schedule');
 var moment = require('moment');
 var RSVP = require('rsvp');
 var nodemailer = require('nodemailer');
+var fs = require("fs");
 
 var config = require('./config');
 
-let processedAds = [];
+let processedAds = loadProcessedAds() || [];
 
 class Ad {
     constructor(url, image, title, description, location, price, datePosted) {
@@ -89,6 +90,26 @@ class Ad {
     }
 }
 
+function loadProcessedAds() {
+    try {
+        return require("./processedAds.json")
+    } catch(e) {
+        return [];
+    }
+}
+
+var failedToSave = false;
+function saveProcessedAds(processedAds) {
+    try {
+        fs.writeFile( "processedAds.json", JSON.stringify(processedAds, null, '\t'), "utf8");
+    } catch (e) {
+        if (!failedToSave) {
+            console.error("unable to save processed ads")
+        }
+        failedToSave = true;
+    }
+}
+
 function updateItems() {
     const promises = config.urls.map(url => createAdFetchPromise(url));
 
@@ -116,7 +137,7 @@ function createAdFetchPromise(url) {
 
             const parsedAds = $('div.search-item').get()
                 .map(item => Ad.buildAd($(item)))
-            
+
             resolve(parsedAds);
         });
     });
@@ -133,6 +154,7 @@ function processNewAds(fetchedAds) {
 
     emailAds(newAds);
     processedAds = processedAds.concat(newAds);
+    saveProcessedAds(processedAds);
 }
 
 function emailAds(ads) {
@@ -170,9 +192,9 @@ function getMailerTransport() {
     }
 
     if (!config.email.oauth.clientId || !config.email.oauth.clientSecret || !config.email.oauth.refreshToken) {
-        console.log('Could not initialize mailer as password was empty and no oauth credentials were provided') 
+        console.log('Could not initialize mailer as password was empty and no oauth credentials were provided')
         return null;
-    } 
+    }
 
     return nodemailer.createTransport({
         host: 'smtp.gmail.com',
