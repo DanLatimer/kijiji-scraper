@@ -128,7 +128,9 @@ function logAdsBeingEmailed(ads) {
 }
 
 function createAdsFoundMessage(ads) {
-    return `We found ${ads.length} new ads for you :)`;
+    const numberOfAds = ads.length;
+    const pluralization = numberOfAds === 1 ? 'ad' : 'ads'
+    return `${numberOfAds} new ${pluralization}`;
 }
 
 function formatAds(ads) {
