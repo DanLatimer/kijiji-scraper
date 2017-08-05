@@ -12,6 +12,17 @@ const { AdStore } = require('./classes/ad-store.js');
 
 var config = require('./config');
 
+console.log('--------------------------------------------')
+console.log('Kijiji Scrapper started');
+console.log('--------------------------------------------\n')
+
+console.log(`Watching the following page for new ads: \n${config.urls.join('\n')}\n`);
+
+const adStore = new AdStore();
+
+schedule.scheduleJob(`*/${config.minutesBetweenCheck} * * * *`, updateItems);
+updateItems();
+
 function updateItems() {
     const promises = config.urls.map(url => createAdFetchPromise(url));
 
@@ -28,7 +39,7 @@ function updateItems() {
                 .then(adList => adList.filter(adItem => !adItem.isBusiness))
                 .then(adList => processNewAds(adList))
         }).then(() => {
-            console.log(`Ads updated, number of ads: ${AdStore.processedAds.length}`);
+            console.log(`Ads updated, total ads in datastore: ${adStore.length}\n`);
         })
 }
 
@@ -46,17 +57,13 @@ function createAdFetchPromise(url) {
 }
 
 function processNewAds(fetchedAds) {
-    let newAds = fetchedAds.filter(ad => !ad.isInList(AdStore.processedAds));
-    newAds = _.uniqBy(newAds, 'url');
-    newAds = _.orderBy(newAds, ['datePosted'], ['desc']);
+    console.log(`fetched ${fetchedAds.length} ads`)
+    const newAds = adStore.add(fetchedAds);
+    console.log(`${newAds.length} were new ads`)
 
-    if (!newAds.length) {
-        return;
+    if (newAds.length) {
+        emailAds(newAds);
     }
-
-    emailAds(newAds);
-    AdStore.processedAds = AdStore.processedAds.concat(newAds);
-    AdStore.saveProcessedAds(AdStore.processedAds);
 }
 
 function emailAds(ads) {
@@ -83,7 +90,7 @@ function emailAds(ads) {
             return console.log(`Email failed: ${error}`);
         }
 
-        console.log(`Email sent successfully`);
+        console.log('Email sent successfully\n');
     });
 }
 
@@ -113,7 +120,7 @@ function getMailerTransport() {
 }
 
 function logAdsBeingEmailed(ads) {
-    console.log(createAdsFoundMessage(ads));
+    console.log('\n' + createAdsFoundMessage(ads));
     ads.forEach(ad => {
         console.log(`emailing new ad: ${ad.title}`);
     });
@@ -131,13 +138,3 @@ function formatAds(ads) {
     return `<h1>${adsFoundMessage}</h1>` +
         `<table>${adsTableRows}</table>`;
 }
-
-const cronRule = `*/${config.minutesBetweenCheck} * * * *`;
-schedule.scheduleJob(cronRule, updateItems);
-
-console.log('Kijiji Scrapper started.');
-console.log(`Watching the following page for new ads: \n${config.urls.join('\n')}`);
-
-console.log();
-
-updateItems();

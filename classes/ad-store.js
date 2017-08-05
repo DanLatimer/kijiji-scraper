@@ -1,40 +1,56 @@
 var fs = require("fs");
+var _ = require('lodash');
 
-const storageFileName = 'processedAds.json'
-let processedAds = loadProcessedAds() || [];
+const storageFileName = 'ad-storage.json'
 
-function loadProcessedAds() {
-    try {
-        return JSON.parse(fs.readFileSync(storageFileName))
-            // return require(`../${storageFileName}`)
-    } catch (e) {
-        console.log('No datastore found. Creating a new one.')
-        return [];
+class AdStore {
+    constructor() {
+        this.ads = []
+        this.failedToSave = false
+        this.load()
     }
-}
 
-var failedToSave = false;
-
-function saveProcessedAds(processedAds) {
-    try {
-        console.log(`writing ${processedAds.length} ads to file`)
-        fs.writeFile(storageFileName, JSON.stringify(processedAds, null, '\t'), "utf8");
-        console.log(`write completed without throwing`)
-    } catch (e) {
-        if (!failedToSave) {
-            console.error("unable to save processed ads")
+    load() {
+        try {
+            this.ads = JSON.parse(fs.readFileSync(storageFileName)) || []
+            console.log(`Datastore loaded ${this.ads.length} ads\n`)
+        } catch (e) {
+            console.log('No datastore found. Will create a new one.')
+            this.data = []
         }
-        failedToSave = true;
+    }
+
+    save() {
+        try {
+            fs.writeFile(storageFileName, JSON.stringify(this.ads, null, '\t'), "utf8");
+        } catch (e) {
+            if (!this.failedToSave) {
+                console.error("unable to save processed ads")
+            }
+            this.failedToSave = true;
+        }
+    }
+
+    add(ads) {
+        let newAds = ads.filter(ad => !ad.isInList(this.ads));
+
+        newAds = _.uniqBy(newAds, 'url');
+        newAds = _.orderBy(newAds, ['datePosted'], ['desc']);
+
+        if (!newAds.length) {
+            return [];
+        }
+
+        // try push with spread
+        this.ads.push(...newAds); // = this.ads.concat(newAds);
+        this.save();
+
+        return newAds;
+    }
+
+    get length() {
+        return this.ads.length
     }
 }
 
-exports.AdStore = {
-    loadProcessedAds: loadProcessedAds,
-    saveProcessedAds: saveProcessedAds,
-    get processedAds() {
-        return processedAds
-    },
-    set processedAds(ads) {
-        processedAds = ads
-    }
-}
+exports.AdStore = AdStore

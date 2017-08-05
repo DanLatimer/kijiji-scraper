@@ -2,4 +2,4 @@ config.js
 node_modules/*
 .idea/*
 *.iml
-processedAds.json
+ad-storage.json
