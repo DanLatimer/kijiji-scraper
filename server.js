@@ -8,31 +8,9 @@ var RSVP = require('rsvp');
 var nodemailer = require('nodemailer');
 var fs = require("fs");
 const { Ad } = require('./classes/ad.js');
+const { AdStore } = require('./classes/ad-store.js');
 
 var config = require('./config');
-
-let processedAds = loadProcessedAds() || [];
-
-function loadProcessedAds() {
-    try {
-        return require("./processedAds.json")
-    } catch (e) {
-        return [];
-    }
-}
-
-var failedToSave = false;
-
-function saveProcessedAds(processedAds) {
-    try {
-        fs.writeFile("processedAds.json", JSON.stringify(processedAds, null, '\t'), "utf8");
-    } catch (e) {
-        if (!failedToSave) {
-            console.error("unable to save processed ads")
-        }
-        failedToSave = true;
-    }
-}
 
 function updateItems() {
     const promises = config.urls.map(url => createAdFetchPromise(url));
@@ -50,7 +28,7 @@ function updateItems() {
                 .then(adList => adList.filter(adItem => !adItem.isBusiness))
                 .then(adList => processNewAds(adList))
         }).then(() => {
-            console.log(`Ads updated, number of ads: ${processedAds.length}`);
+            console.log(`Ads updated, number of ads: ${AdStore.processedAds.length}`);
         })
 }
 
@@ -68,7 +46,7 @@ function createAdFetchPromise(url) {
 }
 
 function processNewAds(fetchedAds) {
-    let newAds = fetchedAds.filter(ad => !ad.isInList(processedAds));
+    let newAds = fetchedAds.filter(ad => !ad.isInList(AdStore.processedAds));
     newAds = _.uniqBy(newAds, 'url');
     newAds = _.orderBy(newAds, ['datePosted'], ['desc']);
 
@@ -77,8 +55,8 @@ function processNewAds(fetchedAds) {
     }
 
     emailAds(newAds);
-    processedAds = processedAds.concat(newAds);
-    saveProcessedAds(processedAds);
+    AdStore.processedAds = AdStore.processedAds.concat(newAds);
+    AdStore.saveProcessedAds(AdStore.processedAds);
 }
 
 function emailAds(ads) {
