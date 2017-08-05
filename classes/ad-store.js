@@ -41,8 +41,7 @@ class AdStore {
             return [];
         }
 
-        // try push with spread
-        this.ads.push(...newAds); // = this.ads.concat(newAds);
+        this.ads.push(...newAds);
         this.save();
 
         return newAds;
