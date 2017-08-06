@@ -46,7 +46,10 @@ function updateItems() {
 function createAdFetchPromise(url) {
     return new RSVP.Promise((resolve, reject) => {
         request(url, (error, response, html) => {
-            const $ = cheerio.load(html);
+            const $ = loadCheerio(html);
+            if (!$) {
+                return
+            }
 
             const parsedAds = $('div.search-item').get()
                 .map(item => Ad.buildAd($(item)))
@@ -54,6 +57,14 @@ function createAdFetchPromise(url) {
             resolve(parsedAds);
         });
     });
+}
+
+function loadCheerio(html) {
+    try {
+        return cheerio.load(html);
+    } catch (e) {
+        console.error('cheerio is a failure :(');
+    }
 }
 
 function processNewAds(fetchedAds) {

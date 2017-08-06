@@ -57,7 +57,11 @@ class Ad {
     queryIsBusinessAd() {
         return new RSVP.Promise((resolve, reject) => {
             request(this.url, (error, response, html) => {
-                const $ = cheerio.load(html);
+                const $ = loadCheerio(html);
+                if (!$) {
+                    return
+                }
+
                 const adProfile = $('#R2SProfile').text();
                 this.isBusiness = adProfile.includes('Business') || adProfile.includes('Retail');
                 resolve(this);
@@ -79,6 +83,14 @@ class Ad {
             `<tr><td>${this.description}</td></tr>` +
             `<tr><td><a href="${this.url}"><img src="${this.image}"/></a></td></tr>` +
             `<tr><td>&nbsp;</td></tr>`;
+    }
+}
+
+function loadCheerio(html) {
+    try {
+        return cheerio.load(html);
+    } catch (e) {
+        console.error('cheerio is a failure :(');
     }
 }
 
