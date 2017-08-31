@@ -9,6 +9,7 @@ var nodemailer = require('nodemailer');
 var fs = require("fs");
 const { Ad } = require('./classes/ad.js');
 const { AdStore } = require('./classes/ad-store.js');
+const { ProgressIndicator } = require('./classes/progress-indicator');
 
 var config = require('./config');
 
@@ -25,24 +26,31 @@ let updatePromise = Promise.resolve()
 updateItems();
 
 function updateItems() {
-    updatePromise = updatePromise.then(() => {
-        const promises = config.urls.map(url => createAdFetchPromise(url));
+    updatePromise = updatePromise
+        .then(() => getAdListPromises())
+        .then(adListPromises => RSVP.Promise.all(adListPromises))
+        .then(parsedAdsList => {
+            const fetchedAds = parsedAdsList.reduce((adList1, adList2) => adList1.concat(adList2));
+            const newAds = adStore.add(fetchedAds);
+            console.log(`fetched ${fetchedAds.length} ads, ${newAds.length} were new ads`)
 
-        return RSVP.Promise.all(promises)
-    }).then(parsedAdsList => {
-        const fetchedAds = parsedAdsList.reduce((adList1, adList2) => adList1.concat(adList2));
+            const adPromises = getAdPromises(newAds)
 
-        console.log(`fetched ${fetchedAds.length} ads`)
-        const newAds = adStore.add(fetchedAds);
-        console.log(`${newAds.length} were new ads`)
+            return RSVP.Promise.all(adPromises)
+                .then(adList => adList.filter(adItem => !adItem.isBusiness))
+                .then(adList => emailAds(adList))
 
-        const adPromises = getAdPromises(newAds)
+        })
+        .then(() => console.log(`Ads updated, total ads in datastore: ${adStore.length}\n`))
+}
 
-        return RSVP.Promise.all(adPromises)
-            .then(adList => adList.filter(adItem => !adItem.isBusiness))
-            .then(adList => emailAds(adList))
+function getAdListPromises() {
+    const progressIndicator = new ProgressIndicator('ad lists', config.urls.length)
 
-    }).then(() => console.log(`Ads updated, total ads in datastore: ${adStore.length}\n`))
+    return config.urls.map(url => createAdFetchPromise(url).then(adList => {
+        progressIndicator.oneComplete();
+        return adList
+    }));
 }
 
 function getAdPromises(newAds) {
@@ -51,29 +59,12 @@ function getAdPromises(newAds) {
         return Promise.resolve(newAds)
     }
 
+    console.log('')
     const progressIndicator = new ProgressIndicator('ad additional details', newAds.length)
     return newAds.map(ad => ad.loadAdditionalDetails().then(ad => {
         progressIndicator.oneComplete();
         return ad
     }))
-}
-
-class ProgressIndicator {
-    constructor(itemBeingLoaded, numberOfItems) {
-        this.numberOfItems = numberOfItems
-        this.numberComplete = 0
-        console.log(`Loading ${this.numberOfItems} ${itemBeingLoaded}`)
-    }
-
-    oneComplete() {
-        this.numberComplete++;
-        if (this.numberComplete < this.numberOfItems) {
-            console.log(`${this.numberComplete} completed`)
-            return
-        }
-
-        console.log(`All complete!`)
-    }
 }
 
 function createAdFetchPromise(url) {
