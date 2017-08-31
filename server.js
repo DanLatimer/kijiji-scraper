@@ -36,7 +36,7 @@ function updateItems() {
 
             const adPromises = getAdPromises(newAds)
 
-            return RSVP.Promise.all(adPromises)
+            return adPromises
                 .then(adList => adList.filter(adItem => !adItem.isBusiness))
                 .then(adList => emailAds(adList))
 
@@ -61,10 +61,12 @@ function getAdPromises(newAds) {
 
     console.log('')
     const progressIndicator = new ProgressIndicator('ad additional details', newAds.length)
-    return newAds.map(ad => ad.loadAdditionalDetails().then(ad => {
+    const adPromises = newAds.map(ad => ad.loadAdditionalDetails().then(ad => {
         progressIndicator.oneComplete();
         return ad
     }))
+
+    return RSVP.Promise.all(adPromises)
 }
 
 function createAdFetchPromise(url) {
