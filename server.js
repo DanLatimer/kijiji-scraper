@@ -21,26 +21,59 @@ console.log(`Watching the following page for new ads: \n${config.urls.join('\n')
 const adStore = new AdStore();
 
 schedule.scheduleJob(`*/${config.minutesBetweenCheck} * * * *`, updateItems);
+let updatePromise = Promise.resolve()
 updateItems();
 
 function updateItems() {
-    const promises = config.urls.map(url => createAdFetchPromise(url));
+    updatePromise = updatePromise.then(() => {
+        const promises = config.urls.map(url => createAdFetchPromise(url));
 
-    return RSVP.Promise.all(promises)
-        .then(parsedAdsList => {
-            const fetchedAds = parsedAdsList.reduce((adList1, adList2) => adList1.concat(adList2));
+        return RSVP.Promise.all(promises)
+    }).then(parsedAdsList => {
+        const fetchedAds = parsedAdsList.reduce((adList1, adList2) => adList1.concat(adList2));
 
-            if (!config.noBusinessAds) {
-                processNewAds(fetchedAds);
-            }
+        console.log(`fetched ${fetchedAds.length} ads`)
+        const newAds = adStore.add(fetchedAds);
+        console.log(`${newAds.length} were new ads`)
 
-            const promises = fetchedAds.map(ad => ad.queryIsBusinessAd())
-            return RSVP.Promise.all(promises)
-                .then(adList => adList.filter(adItem => !adItem.isBusiness))
-                .then(adList => processNewAds(adList))
-        }).then(() => {
-            console.log(`Ads updated, total ads in datastore: ${adStore.length}\n`);
-        })
+        const adPromises = getAdPromises(newAds)
+
+        return RSVP.Promise.all(adPromises)
+            .then(adList => adList.filter(adItem => !adItem.isBusiness))
+            .then(adList => emailAds(adList))
+
+    }).then(() => console.log(`Ads updated, total ads in datastore: ${adStore.length}\n`))
+}
+
+function getAdPromises(newAds) {
+    const requiresAdditionalDetails = config.noBusinessAds || config.highQualityEmails
+    if (!requiresAdditionalDetails) {
+        return Promise.resolve(newAds)
+    }
+
+    const progressIndicator = new ProgressIndicator('ad additional details', newAds.length)
+    return newAds.map(ad => ad.loadAdditionalDetails().then(ad => {
+        progressIndicator.oneComplete();
+        return ad
+    }))
+}
+
+class ProgressIndicator {
+    constructor(itemBeingLoaded, numberOfItems) {
+        this.numberOfItems = numberOfItems
+        this.numberComplete = 0
+        console.log(`Loading ${this.numberOfItems} ${itemBeingLoaded}`)
+    }
+
+    oneComplete() {
+        this.numberComplete++;
+        if (this.numberComplete < this.numberOfItems) {
+            console.log(`${this.numberComplete} completed`)
+            return
+        }
+
+        console.log(`All complete!`)
+    }
 }
 
 function createAdFetchPromise(url) {
@@ -67,17 +100,12 @@ function loadCheerio(html) {
     }
 }
 
-function processNewAds(fetchedAds) {
-    console.log(`fetched ${fetchedAds.length} ads`)
-    const newAds = adStore.add(fetchedAds);
-    console.log(`${newAds.length} were new ads`)
-
-    if (newAds.length) {
-        emailAds(newAds);
-    }
-}
-
 function emailAds(ads) {
+    console.log('emailing ads: ' + ads.length)
+    if (!ads.length) {
+        return
+    }
+
     logAdsBeingEmailed(ads);
 
     let transporter = getMailerTransport();
@@ -88,12 +116,11 @@ function emailAds(ads) {
     // setup e-mail data with unicode symbols
     let mailOptions = {
         from: 'Kijiji Scraper <noreply@example.com>', // sender address
-        to: `${config.email.gmailUser}@gmail.com`, // list of receivers
+        to: `${config.email.targetEmail}`, // list of receivers
         subject: createAdsFoundMessage(ads), // Subject line
         text: JSON.stringify(ads), // plaintext body
         html: formatAds(ads) // html body
     };
-
 
     // send mail with defined transport object
     transporter.sendMail(mailOptions, error => {

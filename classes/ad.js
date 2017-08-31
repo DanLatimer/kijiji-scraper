@@ -5,9 +5,9 @@ var cheerio = require('cheerio');
 var request = require('request');
 
 class Ad {
-    constructor(url, image, title, description, location, price, datePosted) {
+    constructor(url, images, title, description, location, price, datePosted) {
         this.url = url;
-        this.image = image;
+        this.images = images;
         this.title = title;
         this.description = description;
         this.location = location;
@@ -20,7 +20,7 @@ class Ad {
         var ad = new Ad();
 
         ad.url = 'http://www.kijiji.ca' + $jquerySelector.attr('data-vip-url');
-        ad.image = $jquerySelector.find('.image img').attr('src');
+        ad.images = [$jquerySelector.find('.image img').attr('src')];
         ad.title = $jquerySelector.find('a.title').text().trim();
         ad.description = $jquerySelector.find('.description').text().trim();
         ad.location = $jquerySelector.find('.location').text().trim();
@@ -54,19 +54,46 @@ class Ad {
         return moment();
     }
 
-    queryIsBusinessAd() {
+    loadAdditionalDetails() {
+        return this._getAdditionalDetails().then($ => {
+            const adData = JSON.parse($('#FesLoader script').html().replace(/^window.__data=/, '').replace(/;$/, ''))
+
+            this._loadImages(adData)
+            this.isBusiness = _.get(adData, 'viewItemPage.viewItemData.isPaid')
+            this.latitude = _.get(adData, 'viewItemPage.viewItemData.adLocation.latitude')
+            this.longitude = _.get(adData, 'viewItemPage.viewItemData.adLocation.longitude')
+
+            return this
+        })
+    }
+
+    _getAdditionalDetails() {
         return new RSVP.Promise((resolve, reject) => {
             request(this.url, (error, response, html) => {
                 const $ = loadCheerio(html);
-                if (!$) {
+                if ($) {
+                    resolve($);
                     return
                 }
 
-                const adProfile = $('#R2SProfile').text();
-                this.isBusiness = adProfile.includes('Business') || adProfile.includes('Retail');
-                resolve(this);
+                console.error('unable to get ad additional details');
+                reject();
             });
         });
+    }
+
+    _loadImages(adData) {
+        const media = _.get(adData, 'viewItemPage.viewItemData.media');
+        if (!media.length) {
+            return;
+        }
+
+        const images = media.filter(media => media.type === 'image');
+        if (!images.length) {
+            return;
+        }
+
+        this.images = images.map(image => image.href /* could use image.thumbnail */ )
     }
 
     isEqual(ad) {
@@ -78,11 +105,20 @@ class Ad {
     }
 
     toHtml() {
-        return `<tr><td><a href="${this.url}">${this.title}</a> Price: ${this.price}</td></tr>` +
+        let html =
+            `<tr><td><a href="${this.url}">${this.title}</a> Price: ${this.price}</td></tr>` +
             `<tr><td>${this.location}</td></tr>` +
             `<tr><td>${this.description}</td></tr>` +
-            `<tr><td><a href="${this.url}"><img src="${this.image}"/></a></td></tr>` +
-            `<tr><td>&nbsp;</td></tr>`;
+            `<tr><td>` +
+            this.images.map(image => `<a href="${this.url}"><img src="${image}"/></a>`).join('') +
+            `</td></tr>`;
+
+        if (this.latitude && this.longitude) {
+            html += `<tr><td>latitude: ${this.latitude} longitude: ${this.longitude}</td></tr>`
+        }
+        html += `<tr><td>&nbsp;</td></tr>`;
+
+        return html;
     }
 }
 
