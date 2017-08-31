@@ -74,7 +74,8 @@ function createAdFetchPromise(url) {
         request(url, (error, response, html) => {
             const $ = loadCheerio(html);
             if (!$) {
-                return
+                console.log(`Failed to load ad list: ${url}`)
+                return resolve([]);
             }
 
             const parsedAds = $('div.search-item').get()

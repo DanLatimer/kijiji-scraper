@@ -64,7 +64,9 @@ class Ad {
             this.longitude = _.get(adData, 'viewItemPage.viewItemData.adLocation.longitude')
 
             return this
-        })
+        }).catch(() => {
+            return this
+        });
     }
 
     _getAdditionalDetails() {
@@ -131,4 +133,3 @@ function loadCheerio(html) {
 }
 
 exports.Ad = Ad
-    //export default Ad
