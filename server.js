@@ -92,7 +92,6 @@ function loadCheerio(html) {
 }
 
 function emailAds(ads) {
-    console.log('emailing ads: ' + ads.length)
     if (!ads.length) {
         return
     }
