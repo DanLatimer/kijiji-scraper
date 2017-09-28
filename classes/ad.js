@@ -3,6 +3,7 @@ var moment = require('moment');
 var RSVP = require('rsvp');
 var cheerio = require('cheerio');
 var request = require('request');
+var config = require('../config');
 
 class Ad {
     constructor(url, images, title, description, location, price, datePosted) {
@@ -115,9 +116,16 @@ class Ad {
             this.images.map(image => `<a href="${this.url}"><img src="${image}"/></a>`).join('') +
             `</td></tr>`;
 
-        if (this.latitude && this.longitude) {
-            html += `<tr><td>latitude: ${this.latitude} longitude: ${this.longitude}</td></tr>`
+        if (this.latitude && this.longitude && config.map.googleMapsApiKey && config.map.homeLocation) {
+            const itemLocation = `${this.latitude},${this.longitude}`
+            html += `
+            <tr><td>
+              <a href="http://maps.google.com/?q=${itemLocation}">
+                <img src="https://maps.googleapis.com/maps/api/staticmap?size=600x400&maptype=roadmap&key=${config.map.googleMapsApiKey}&format=png&visual_refresh=true&markers=size:tiny|color:0xff0000|${config.map.homeLocation}&markers=size:mid|color:0xff0000|${itemLocation}">
+              </a>
+            </td></tr>`
         }
+
         html += `<tr><td>&nbsp;</td></tr>`;
 
         return html;

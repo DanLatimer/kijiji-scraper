@@ -28,6 +28,14 @@ var config = {
         }
     },
 
+    map: {
+        // get yours here: https://developers.google.com/maps/documentation/javascript/get-api-key
+        googleMapsApiKey: '',
+
+        // lat,long example: '44.7891217,-63.6250432'
+        homeLocation: ''
+    },
+
     // Check evert X minutes
     minutesBetweenCheck: 10,
 
