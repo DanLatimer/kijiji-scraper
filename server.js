@@ -32,13 +32,17 @@ function updateItems() {
         .then(parsedAdsList => {
             const fetchedAds = parsedAdsList.reduce((adList1, adList2) => adList1.concat(adList2));
             const newAds = adStore.add(fetchedAds);
-            console.log(`fetched ${fetchedAds.length} ads, ${newAds.length} were new ads`)
 
             const adPromises = getAdPromises(newAds)
 
             return adPromises
+                .then(adList => adList.filter(adItem => !adItem.isIgnored))
                 .then(adList => adList.filter(adItem => !adItem.isBusiness))
-                .then(adList => emailAds(adList))
+                .then(adList => {
+                    const ignoredCount = newAds.length - adList.length;
+                    console.log(`fetched ${fetchedAds.length} ads, ${newAds.length} new, ${ignoredCount} ignored, emailing ${adList.length}`);
+                    emailAds(adList);
+                })
 
         })
         .then(() => console.log(`Ads updated, total ads in datastore: ${adStore.length}\n`))
@@ -47,10 +51,12 @@ function updateItems() {
 function getAdListPromises() {
     const progressIndicator = new ProgressIndicator('ad lists', config.urls.length)
 
-    return config.urls.map(url => createAdFetchPromise(url).then(adList => {
-        progressIndicator.oneComplete();
-        return adList
-    }));
+    return config.urls
+        .map(urlConfig => createAdFetchPromise(urlConfig)
+        .then(adList => {
+            progressIndicator.oneComplete();
+            return adList
+        }));
 }
 
 function getAdPromises(newAds) {
@@ -69,8 +75,22 @@ function getAdPromises(newAds) {
     return RSVP.Promise.all(adPromises)
 }
 
-function createAdFetchPromise(url) {
+function createAdFetchPromise(urlConfig) {
+    let url;
+    let ignores
+    if (typeof urlConfig === 'string') {
+        url = urlConfig;
+    } else {
+        url = urlConfig.url
+        ignores = _.get(urlConfig, 'ignores', [])
+    }
+
     return new RSVP.Promise((resolve, reject) => {
+        if (_.isEmpty(url)) {
+            console.log(`invalid URL config: ${urlConfig}`)
+            resolve([]);
+            return;    
+        }
         request(url, (error, response, html) => {
             const $ = loadCheerio(html);
             if (!$) {
@@ -79,7 +99,7 @@ function createAdFetchPromise(url) {
             }
 
             const parsedAds = $('div.search-item').get()
-                .map(item => Ad.buildAd($(item)))
+                .map(item => Ad.buildAd($(item), ignores))
 
             resolve(parsedAds);
         });
