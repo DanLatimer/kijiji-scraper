@@ -15,9 +15,10 @@ class Ad {
         this.price = price;
         this.isBusiness = null;
         this.datePosted = datePosted;
+        this.isIgnored = false;
     }
 
-    static buildAd($jquerySelector) {
+    static buildAd($jquerySelector, ignores) {
         var ad = new Ad();
 
         ad.url = 'http://www.kijiji.ca' + $jquerySelector.attr('data-vip-url');
@@ -27,6 +28,8 @@ class Ad {
         ad.location = $jquerySelector.find('.location').text().trim();
         ad.price = $jquerySelector.find('.price').text().trim();
         ad.datePosted = Ad.determineDatePosted($jquerySelector.find('.date-posted').text().trim());
+
+        ad.isIgnored = ad.matchesTexts(ignores);
 
         return ad;
     }
@@ -105,6 +108,12 @@ class Ad {
 
     isInList(ads) {
         return _.some(ads, ad => this.isEqual(ad));
+    }
+
+    matchesTexts(inputTexts) {
+        return _.some(
+            inputTexts,
+            inputText => _.some([this.title, this.description], adText => adText.toLowerCase().includes(inputText.toLowerCase())));
     }
 
     toHtml() {

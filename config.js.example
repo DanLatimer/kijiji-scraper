@@ -3,7 +3,11 @@ var config = {
     // Urls of the kijiji search pages you want to scrape
     // hint - use the filters as much as you want then copy the resulting url
     urls: [
-        ''
+        'http://kiji...', // simple style where no additional filtering of results is needed
+        {
+            url: 'http://kij...'
+            ignores: ['search', 'strings', 'that you do not want to be contained in the ad'] // ex: "coffee" for a brew search, where you only want beer related results
+        }
     ],
 
     email: {
