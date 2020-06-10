@@ -32,7 +32,7 @@ class Ad {
         ad.requestQueue = requestQueue
         ad.datePosted = Ad.determineDatePosted($jquerySelector.find('.date-posted').text().trim());
 
-        ad.isBusiness = !_.isEmpty($jquerySelector.find('.icas-ad-badge'))
+        ad.isBusiness = $jquerySelector.attr('class').includes('third-party')
         ad.isIgnored = ad.matchesTexts(ignores);
 
         return ad;
