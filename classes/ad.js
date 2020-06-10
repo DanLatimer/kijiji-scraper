@@ -24,7 +24,7 @@ class Ad {
         var ad = new Ad();
 
         ad.url = 'http://www.kijiji.ca' + $jquerySelector.attr('data-vip-url');
-        ad.images = [$jquerySelector.find('.image source').attr('data-srcset/')];
+        ad.images = [$jquerySelector.find('.image source').attr('data-srcset')];
         ad.title = $jquerySelector.find('a.title').text().trim();
         ad.description = $jquerySelector.find('.description').text().trim();
         ad.location = $jquerySelector.find('.location').text().trim();
@@ -32,6 +32,7 @@ class Ad {
         ad.requestQueue = requestQueue
         ad.datePosted = Ad.determineDatePosted($jquerySelector.find('.date-posted').text().trim());
 
+        ad.isBusiness = !_.isEmpty($jquerySelector.find('.icas-ad-badge'))
         ad.isIgnored = ad.matchesTexts(ignores);
 
         return ad;
@@ -66,7 +67,6 @@ class Ad {
             const adData = JSON.parse($('#FesLoader script').html().replace(/^window.__data=/, '').replace(/;$/, ''))
 
             this._loadImages(adData)
-            this.isBusiness = _.get(adData, 'viewItemPage.viewItemData.isPaid')
             this.latitude = _.get(adData, 'viewItemPage.viewItemData.adLocation.latitude')
             this.longitude = _.get(adData, 'viewItemPage.viewItemData.adLocation.longitude')
 

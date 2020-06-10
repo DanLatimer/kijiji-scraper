@@ -44,7 +44,6 @@ var config = {
     minutesBetweenCheck: 10,
 
     // Below options require a server call per ad (must download the ad's webpage), enable at own risk
-    noBusinessAds: false,
     highQualityEmails: false
 };
 
