@@ -21,14 +21,16 @@ class AdStore {
     }
 
     save() {
-        try {
-            fs.writeFile(storageFileName, JSON.stringify(this.ads, null, '\t'), "utf8");
-        } catch (e) {
+        fs.writeFile(storageFileName, JSON.stringify(this.ads, null, '\t'), err => {
+            if (!err) {
+                return
+            }
+
             if (!this.failedToSave) {
-                console.error("unable to save processed ads")
+                console.error("unable to save processed ads", err)
             }
             this.failedToSave = true;
-        }
+        });
     }
 
     add(ads) {
