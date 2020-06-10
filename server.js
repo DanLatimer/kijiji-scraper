@@ -73,7 +73,7 @@ function getAdListPromises() {
 }
 
 function getAdPromises(newAds) {
-    const requiresAdditionalDetails = config.noBusinessAds || config.highQualityEmails
+    const requiresAdditionalDetails = config.highQualityEmails
     if (!requiresAdditionalDetails) {
         return Promise.resolve(newAds)
     }

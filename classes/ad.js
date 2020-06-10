@@ -32,6 +32,7 @@ class Ad {
         ad.requestQueue = requestQueue
         ad.datePosted = Ad.determineDatePosted($jquerySelector.find('.date-posted').text().trim());
 
+        ad.isBusiness = !_.isEmpty($jquerySelector.find('.icas-ad-badge'))
         ad.isIgnored = ad.matchesTexts(ignores);
 
         return ad;
@@ -66,7 +67,6 @@ class Ad {
             const adData = JSON.parse($('#FesLoader script').html().replace(/^window.__data=/, '').replace(/;$/, ''))
 
             this._loadImages(adData)
-            this.isBusiness = _.get(adData, 'viewItemPage.viewItemData.isPaid')
             this.latitude = _.get(adData, 'viewItemPage.viewItemData.adLocation.latitude')
             this.longitude = _.get(adData, 'viewItemPage.viewItemData.adLocation.longitude')
 
