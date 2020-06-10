@@ -5,6 +5,7 @@
   "main": "server.js",
   "author": "DanLatimer",
   "dependencies": {
+    "axios": "^0.19.2",
     "cheerio": "latest",
     "express": "latest",
     "jetty": "^0.2.1",
@@ -12,8 +13,8 @@
     "moment": "^2.18.1",
     "node-schedule": "latest",
     "nodemailer": "latest",
-    "request": "latest",
     "rsvp": "latest",
+    "smart-request-balancer": "^2.1.1",
     "xoauth2": "^1.2.0"
   }
 }
