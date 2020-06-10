@@ -1,32 +1,35 @@
-var _ = require('lodash');
-var moment = require('moment');
-var RSVP = require('rsvp');
-var cheerio = require('cheerio');
-var request = require('request');
-var config = require('../config');
+const axios = require('axios')
+const cheerio = require('cheerio')
+const _ = require('lodash')
+const moment = require('moment')
+const RSVP = require('rsvp')
+
+const config = require('../config')
 
 class Ad {
-    constructor(url, images, title, description, location, price, datePosted) {
+    constructor(url, images, title, description, location, price, datePosted, requestQueue) {
         this.url = url;
         this.images = images;
         this.title = title;
         this.description = description;
         this.location = location;
         this.price = price;
+        this.requestQueue = requestQueue;
         this.isBusiness = null;
         this.datePosted = datePosted;
         this.isIgnored = false;
     }
 
-    static buildAd($jquerySelector, ignores) {
+    static buildAd($jquerySelector, ignores, requestQueue) {
         var ad = new Ad();
 
         ad.url = 'http://www.kijiji.ca' + $jquerySelector.attr('data-vip-url');
-        ad.images = [$jquerySelector.find('.image img').attr('src')];
+        ad.images = [$jquerySelector.find('.image source').attr('data-srcset/')];
         ad.title = $jquerySelector.find('a.title').text().trim();
         ad.description = $jquerySelector.find('.description').text().trim();
         ad.location = $jquerySelector.find('.location').text().trim();
         ad.price = $jquerySelector.find('.price').text().trim();
+        ad.requestQueue = requestQueue
         ad.datePosted = Ad.determineDatePosted($jquerySelector.find('.date-posted').text().trim());
 
         ad.isIgnored = ad.matchesTexts(ignores);
@@ -74,18 +77,17 @@ class Ad {
     }
 
     _getAdditionalDetails() {
-        return new RSVP.Promise((resolve, reject) => {
-            request(this.url, (error, response, html) => {
-                const $ = loadCheerio(html);
-                if ($) {
-                    resolve($);
-                    return
-                }
+        return requestQueue.request(retry =>
+            axios
+                .get(this.url)
+                .then(response => {
+                    const $ = loadCheerio(response.data);
+                    if ($) {
+                        return $;
+                    }
 
-                console.error('unable to get ad additional details');
-                reject();
-            });
-        });
+                    throw error('unable to get ad additional details');
+                }));
     }
 
     _loadImages(adData) {

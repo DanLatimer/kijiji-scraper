@@ -1,23 +1,33 @@
 "use strict";
-var _ = require('lodash');
-var request = require('request');
-var cheerio = require('cheerio');
-var schedule = require('node-schedule');
-var moment = require('moment');
-var RSVP = require('rsvp');
-var nodemailer = require('nodemailer');
-var fs = require("fs");
+const axios = require('axios');
+const _ = require('lodash');
+const cheerio = require('cheerio');
+const schedule = require('node-schedule');
+const moment = require('moment');
+const Queue = require('smart-request-balancer');
+const RSVP = require('rsvp');
+const nodemailer = require('nodemailer');
+const fs = require("fs");
 const { Ad } = require('./classes/ad.js');
 const { AdStore } = require('./classes/ad-store.js');
 const { ProgressIndicator } = require('./classes/progress-indicator');
 
-var config = require('./config');
+const config = require('./config');
+
+const requestQueue = new Queue({
+    overall: {
+        limit: 2,
+        rate: 1,
+    },
+    retryTime: 300,
+    ignoreOverallOverheat: true
+})
 
 console.log('--------------------------------------------')
 console.log('Kijiji Scrapper started');
 console.log('--------------------------------------------\n')
 
-console.log(`Watching the following page for new ads: \n${config.urls.join('\n')}\n`);
+console.log(`Watching the following page for new ads: \n${config.urls.map(u => u.url ? u.url : u).join('\n')}\n`);
 
 const adStore = new AdStore();
 
@@ -46,17 +56,20 @@ function updateItems() {
 
         })
         .then(() => console.log(`Ads updated, total ads in datastore: ${adStore.length}\n`))
+        .catch(err => console.error('error fetching things:', err))
 }
 
 function getAdListPromises() {
     const progressIndicator = new ProgressIndicator('ad lists', config.urls.length)
 
     return config.urls
-        .map(urlConfig => createAdFetchPromise(urlConfig)
-        .then(adList => {
-            progressIndicator.oneComplete();
-            return adList
-        }));
+        .map(urlConfig =>
+            createAdFetchPromise(urlConfig)
+                .then(adList => {
+                    progressIndicator.oneComplete()
+                    return adList
+                })
+        )
 }
 
 function getAdPromises(newAds) {
@@ -68,7 +81,7 @@ function getAdPromises(newAds) {
     console.log('')
     const progressIndicator = new ProgressIndicator('ad additional details', newAds.length)
     const adPromises = newAds.map(ad => ad.loadAdditionalDetails().then(ad => {
-        progressIndicator.oneComplete();
+        progressIndicator.oneComplete()
         return ad
     }))
 
@@ -79,31 +92,34 @@ function createAdFetchPromise(urlConfig) {
     let url;
     let ignores
     if (typeof urlConfig === 'string') {
-        url = urlConfig;
+        url = urlConfig
     } else {
         url = urlConfig.url
         ignores = _.get(urlConfig, 'ignores', [])
     }
 
-    return new RSVP.Promise((resolve, reject) => {
-        if (_.isEmpty(url)) {
-            console.log(`invalid URL config: ${urlConfig}`)
-            resolve([]);
-            return;    
-        }
-        request(url, (error, response, html) => {
-            const $ = loadCheerio(html);
-            if (!$) {
-                console.log(`Failed to load ad list: ${url}`)
-                return resolve([]);
-            }
+    if (_.isEmpty(url)) {
+        console.log(`invalid URL config: ${urlConfig}`)
+        return RSVP.Promise.resolve([])
+    }
+    return requestQueue.request(retry =>
+        axios
+            .get(url)
+            .then(response => {
+                const $ = loadCheerio(response.data);
+                if (!$) {
+                    console.log(`Failed to load ad list: ${url}`)
+                    return []
+                }
 
-            const parsedAds = $('div.search-item').get()
-                .map(item => Ad.buildAd($(item), ignores))
+                const parsedAds = $('div.search-item')
+                    .get()
+                    .map(item => {
+                        return Ad.buildAd($(item), ignores, requestQueue)
+                    })
 
-            resolve(parsedAds);
-        });
-    });
+                return parsedAds
+            }))
 }
 
 function loadCheerio(html) {
