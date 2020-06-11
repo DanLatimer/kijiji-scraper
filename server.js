@@ -205,5 +205,5 @@ function formatAds(ads) {
     const adsTableRows = ads.map(ad => ad.toHtml());
 
     return `<h1>${adsFoundMessage}</h1>` +
-        `<table>${adsTableRows}</table>`;
+        `<table>${adsTableRows.join('')}</table>`;
 }
