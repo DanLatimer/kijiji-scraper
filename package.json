@@ -9,7 +9,7 @@
     "cheerio": "latest",
     "express": "latest",
     "jetty": "^0.2.1",
-    "lodash": "^4.17.13",
+    "lodash": "^4.17.19",
     "moment": "^2.19.3",
     "node-schedule": "latest",
     "nodemailer": "latest",
