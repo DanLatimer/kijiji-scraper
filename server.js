@@ -12,7 +12,7 @@ const { Ad } = require('./classes/ad.js');
 const { AdStore } = require('./classes/ad-store.js');
 const { ProgressIndicator } = require('./classes/progress-indicator');
 
-const config = require('./config');
+// const config = require('./config');
 
 const requestQueue = new Queue({
     overall: {
@@ -24,16 +24,49 @@ const requestQueue = new Queue({
 })
 
 console.log('--------------------------------------------')
-console.log('Kijiji Scrapper started');
+console.log('Covid Scrapper started');
 console.log('--------------------------------------------\n')
 
-console.log(`Watching the following page for new ads: \n${config.urls.map(u => u.url ? u.url : u).join('\n')}\n`);
+// console.log(`Watching the following page for new ads: \n${config.urls.map(u => u.url ? u.url : u).join('\n')}\n`);
 
-const adStore = new AdStore();
+// const adStore = new AdStore();
 
-schedule.scheduleJob(`*/${config.minutesBetweenCheck} * * * *`, updateItems);
+schedule.scheduleJob(`*/1 * * * *`, queryCovid);
+
+queryCovid();
+
+// const covidUrl = 'https://sync-cf2-1.canimmunize.ca/fhir/v1/public/booking-page/17430812-2095-4a35-a523-bb5ce45d60f1/appointment-types?preview=false';
+
+function queryCovid() {
+    axios
+        .get('https://sync-cf2-1.canimmunize.ca/fhir/v1/public/booking-page/17430812-2095-4a35-a523-bb5ce45d60f1/appointment-types?preview=false')
+        .then(response => {
+            const resultsUnder40 = response.data.results
+                .filter(item => item.minAge < 40)
+
+            const resultsUnder40Found = resultsUnder40.length
+            if (!resultsUnder40Found) {
+                console.log('Results under 40 found: (' + resultsUnder40.length + ')')
+            }
+            else {
+                console.log()
+                console.log('-------------------------------------------------')
+                console.log('-------------------------------------------------')
+                console.log('-------------------------------------------------')
+                console.log('APPOINTMENT UNDER 40 FOUND!!!')
+                console.log('-------------------------------------------------')
+                console.log('-------------------------------------------------')
+                console.log('-------------------------------------------------')
+                console.log()
+            }
+
+        })
+}
+
+
+
 let updatePromise = Promise.resolve()
-updateItems();
+// updateItems();
 
 function updateItems() {
     updatePromise = updatePromise
